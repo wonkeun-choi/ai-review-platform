@@ -1,30 +1,21 @@
 services:
-  web:
-    build:
-      context: ./apps/web
-      dockerfile: Dockerfile
-    container_name: web
-    ports: ["3000:3000"]
-    depends_on: [review-engine, interview-gen]
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
 
   review-engine:
-    build:
-      context: ./apps/review-engine
-      dockerfile: Dockerfile
-    container_name: review-engine
-    ports: ["8000:8000"]
+    build: ./apps/review-engine
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=llama3.1:8b-instruct
+    depends_on:
+      - ollama
 
-  interview-gen:
-    build:
-      context: ./apps/interview-gen
-      dockerfile: Dockerfile
-    container_name: interview-gen
-    ports: ["8001:8001"]
-
-  gateway:
-    build:
-      context: ./apps/gateway
-      dockerfile: Dockerfile
-    container_name: gateway
-    ports: ["8080:8080"]
-    depends_on: [web, review-engine, interview-gen]
+volumes:
+  ollama_models:

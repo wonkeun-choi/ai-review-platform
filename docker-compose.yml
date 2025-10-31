@@ -1,0 +1,30 @@
+services:
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: web
+    ports: ["3000:3000"]
+    depends_on: [review-engine, interview-gen]
+
+  review-engine:
+    build:
+      context: ./apps/review-engine
+      dockerfile: Dockerfile
+    container_name: review-engine
+    ports: ["8000:8000"]
+
+  interview-gen:
+    build:
+      context: ./apps/interview-gen
+      dockerfile: Dockerfile
+    container_name: interview-gen
+    ports: ["8001:8001"]
+
+  gateway:
+    build:
+      context: ./apps/gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    ports: ["8080:8080"]
+    depends_on: [web, review-engine, interview-gen]

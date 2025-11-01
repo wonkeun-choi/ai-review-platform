@@ -4,5 +4,5 @@
 cd apps/review-engine
 
 ## 2. 서버 실행
-docker-compose up --build
+docker-compose up --build\
 http://localhost/

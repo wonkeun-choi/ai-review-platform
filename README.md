@@ -8,5 +8,5 @@ docker-compose up --build\
 http://localhost/
 
 ### <참고>
-.env 파일에 GEMINI_API_KEY=키\
+.env 파일 생성 후 GEMINI_API_KEY=키\
 AI 모델 키를 입력해야함

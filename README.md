@@ -4,9 +4,9 @@
 cd apps/review-engine
 
 ## 2. 서버 실행
-docker-compose up --build
-\http://localhost/
+docker-compose up --build\
+http://localhost/
 
 ## 참고
-.env 파일에 GEMINI_API_KEY=키
-\키를 입력해야함
+.env 파일에 GEMINI_API_KEY=키\
+AI 모델 키를 입력해야함

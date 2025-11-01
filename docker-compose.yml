@@ -1,21 +1,19 @@
+version: '3.8'
+
 services:
-  ollama:
-    image: ollama/ollama:latest
-    restart: unless-stopped
+  gateway:
+    build: ./apps/gateway
     ports:
-      - "11434:11434"
-    volumes:
-      - ollama_models:/root/.ollama
+      - "80:80" # 사용자는 80포트로만 접속
+    depends_on:
+      - web
+      - review-engine
+
+  web:
+    build: ./apps/web
+    # 포트는 gateway가 내부적으로 3000으로 연결
 
   review-engine:
     build: ./apps/review-engine
-    ports:
-      - "8000:8000"
-    environment:
-      - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_MODEL=llama3.1:8b-instruct
-    depends_on:
-      - ollama
-
-volumes:
-  ollama_models:
+    env_file:
+      - .env

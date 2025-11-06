@@ -1,47 +1,126 @@
-version: '3.8'
-
 services:
-  web:
-    build: ./apps/web
-    ports:
-      - "3000:3000"
-    depends_on:
-      - gateway
-
+  # ------------------------------------------------
+  # 🌐 GATEWAY (Nginx reverse proxy)
+  # ------------------------------------------------
   gateway:
-    build: ./apps/gateway
+    image: nginx:1.27-alpine
+    container_name: gateway
     ports:
-      - "8080:8080"
+      - "80:80"
+    volumes:
+      - ./apps/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
+      - web
       - review-service
       - coding-service
-    env_file:
-      - .env
+      - interview-service
+    networks: [appnet]
 
+  # ------------------------------------------------
+  # 💻 FRONTEND (React / Next / Vite)
+  # ------------------------------------------------
+  web:
+    build:
+      context: ./apps/web/web-react
+      dockerfile: Dockerfile
+    container_name: web
+    networks: [appnet]
+
+  # ------------------------------------------------
+  # 🔍 REVIEW SERVICE (FastAPI)
+  # ------------------------------------------------
   review-service:
     build: ./apps/review-service
+    container_name: review-service
     env_file:
       - .env
-    depends_on:
-      - db
+    expose:
+      - "8001"
+    networks: [appnet]
 
+  # ------------------------------------------------
+  # 🤖 INTERVIEW SERVICE (FastAPI)
+  # ------------------------------------------------
+  interview-service:
+    build: ./apps/interview-service
+    container_name: interview-service
+    env_file:
+      - .env
+    expose:
+      - "8002"
+    networks: [appnet]
+
+  # ------------------------------------------------
+  # 💡 CODING SERVICE (FastAPI + Judge0)
+  # ------------------------------------------------
   coding-service:
     build: ./apps/coding-service
+    container_name: coding-service
     env_file:
       - .env
-    depends_on:
-      - db
-
-  db:
-    image: postgres:14-alpine
-    ports:
-      - "5432:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      - JUDGE0_URL=http://judge0-api:2358
+    expose:
+      - "8000"
+    depends_on:
+      - judge0-api
+    networks: [appnet]
+
+  # ------------------------------------------------
+  # 🗄️ POSTGRES (for Judge0)
+  # ------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: judge0-db
+    environment:
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - judge0-db:/var/lib/postgresql/data
+    networks: [appnet]
+
+  # ------------------------------------------------
+  # ⚙️ JUDGE0 API
+  # ------------------------------------------------
+  judge0-api:
+    image: judge0/judge0:latest
+    container_name: judge0-api
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=judge0
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0
+      - ENABLE_ACCESS_LOG=1
+      - MAX_EXECUTION_TIME=10
+    depends_on:
+      - postgres
+    networks: [appnet]
+    ports:
+      - "2358:2358"
+
+  # ------------------------------------------------
+  # 🧵 JUDGE0 WORKER
+  # ------------------------------------------------
+  judge0-worker:
+    image: judge0/judge0:latest
+    container_name: judge0-worker
+    command: ["./scripts/workers/run.sh"]
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=judge0
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0
+    depends_on:
+      - postgres
+      - judge0-api
+    networks: [appnet]
+
+# ------------------------------------------------
+# 🔗 NETWORKS & VOLUMES
+# ------------------------------------------------
+networks:
+  appnet:
 
 volumes:
-  postgres_data:
+  judge0-db:

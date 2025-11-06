@@ -1,0 +1,28 @@
+/* ---- Tailwind 우선 로드 ---- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- 리셋: 화면 꽉 채우기 & 여백 제거 ---- */
+* { box-sizing: border-box; }
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- 베이스(다크 테마 + 고급 폰트) ---- */
+body {
+  background-color: #0a0a0a;
+  color: #f8fafc;
+  font-family: 'Plus Jakarta Sans', 'Inter Tight', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  /* 은은한 그라디언트 오라 */
+  background-image:
+    radial-gradient(1000px 500px at 50% -10%, rgba(56,189,248,0.22), transparent),
+    radial-gradient(900px 500px at 85% 10%, rgba(167,139,250,0.18), transparent);
+  background-repeat: no-repeat;
+}
+
+/* 링크 기본색/밑줄 제거(디자인 통일) */
+a { text-decoration: none; color: inherit; }

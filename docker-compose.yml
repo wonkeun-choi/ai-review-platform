@@ -1,19 +1,47 @@
 version: '3.8'
 
 services:
+  web:
+    build: ./apps/web
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+
   gateway:
     build: ./apps/gateway
     ports:
-      - "80:80" # 사용자는 80포트로만 접속
+      - "8080:8080"
     depends_on:
-      - web
-      - review-engine
-
-  web:
-    build: ./apps/web
-    # 포트는 gateway가 내부적으로 3000으로 연결
-
-  review-engine:
-    build: ./apps/review-engine
+      - review-service
+      - coding-service
     env_file:
       - .env
+
+  review-service:
+    build: ./apps/review-service
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  coding-service:
+    build: ./apps/coding-service
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

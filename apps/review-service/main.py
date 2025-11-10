@@ -1,51 +1,70 @@
 import os
-import httpx
-from fastapi import FastAPI, Form
+import google.generativeai as genai
+from fastapi import FastAPI, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
-# --- CORS 허용 (web에서 요청 가능하게)
+# ----------------------------------------------------
+# CORS 설정 (web/vite:3000 허용)
+# ----------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- 환경변수 설정
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-APP_MODEL = os.getenv("APP_MODEL", "gemini-1.5-flash-latest")
+# ----------------------------------------------------
+# Gemini AI 설정
+# ----------------------------------------------------
+try:
+    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+    model = genai.GenerativeModel('gemini-1.5-flash')
+except Exception as e:
+    print(f"Error configuring Gemini: {e}")
+    model = None
 
-if not GEMINI_API_KEY:
-    raise ValueError("환경변수 GEMINI_API_KEY가 설정되어 있지 않습니다!")
+# ----------------------------------------------------
+# 🚀 (신규) AI 코드 리뷰어 역할 부여 (System Prompt)
+# ----------------------------------------------------
+REVIEWER_PROMPT = """
+You are an expert Senior Software Engineer acting as a code reviewer.
+Your task is to provide a constructive, professional code review for the user's code snippet.
 
-# --- 코드 리뷰 엔드포인트
-@app.post("/review")
-async def review_code(code: str = Form(...)):
-    prompt = f"""
-아래 코드를 검토하고, 가독성 / 보안 / 성능 관점에서 핵심 피드백을 항목별로 작성해줘.
-각 항목마다 bullet point로 정리하고, 필요시 간단한 수정 예시를 포함해줘.
+Follow these steps:
+1.  **Overall Assessment:** Start with a brief, one-sentence summary of the code's quality (e.g., "This is a clean implementation," "This works, but has some areas for improvement").
+2.  **Positive Feedback:** (Optional) Briefly mention one thing that is done well.
+3.  **Constructive Criticism:** Identify 2-3 key areas for improvement. For each area, provide:
+    * **Issue:** Clearly state the problem (e.g., "Potential N+1 query," "Variable name is unclear," "Inefficient algorithm").
+    * **Suggestion:** Provide a concrete example of how to fix it or a better approach.
+4.  **Conclusion:** End with an encouraging summary.
 
-코드:
-{code}
+Format your response using Markdown. Use **bold** text for headings (like **Issue:** and **Suggestion:**) and `code snippets` for code. Do not use Markdown headings (#, ##).
 """
-    url = f"{GEMINI_BASE_URL}/{APP_MODEL}:generateContent?key={GEMINI_API_KEY}"
 
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
-        data = resp.json()
+# ----------------------------------------------------
+# API 엔드포인트 정의
+# ----------------------------------------------------
+@app.post("/api/review")
+async def handle_code_review(code: str = Form(...)): # 👈 Review.jsx의 FormData("code")를 받음
+    if not model:
+        raise HTTPException(status_code=503, detail="Gemini AI model is not configured.")
 
     try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception:
-        text = f"오류가 발생했습니다: {data}"
+        # 1. 시스템 프롬프트와 사용자 코드를 결합하여 API 호출
+        full_prompt = f"{REVIEWER_PROMPT}\n\nHere is the code to review:\n```\n{code}\n```"
+        response = model.generate_content(full_prompt)
+        
+        # 2. AI의 리뷰 텍스트를 반환 (Review.jsx의 data.review에 해당)
+        return {"review": response.text}
 
-    return {"status": "success", "review": text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get review: {str(e)}")
 
-# --- 헬스체크
-@app.get("/healthz")
-def health():
-    return {"ok": True, "service": "review-service"}
+@app.get("/")
+def read_root():
+    return {"status": "Review Service is running."}

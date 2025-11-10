@@ -33,7 +33,9 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: apps/web/web-react/package-lock.json
+          cache-dependency-path: |
+            apps/web/web-react/package-lock.json
+            apps/web/package-lock.json
       - name: Install
         run: |
           if [ -f package-lock.json ]; then
@@ -43,8 +45,9 @@ jobs:
           fi
       - name: Build
         run: |
-          if npm run | findstr /I /R "^  build"; then
+          if npm run | grep -E "^\s*build" >/dev/null; then
             npm run build
           else
             echo "No build script. Skipping."
           fi
+

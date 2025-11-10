@@ -1,0 +1,65 @@
+name: Lint
+
+on:
+  push:
+    branches: [ develop, "feature/*" ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  python-flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # 파이썬 파일이 있을 때만 lint 실행
+      - id: detect_py
+        name: Detect Python files
+        run: |
+          if [ -n "$(git ls-files '*.py')" ]; then
+            echo "has_py=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_py=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Install flake8
+        if: steps.detect_py.outputs.has_py == 'true'
+        run: pip install flake8
+      - name: Run flake8
+        if: steps.detect_py.outputs.has_py == 'true'
+        run: |
+          echo "Running flake8..."
+          flake8 . || true  # 초기엔 실패 막기
+
+  node-eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # JS/TS 파일이 있을 때만 lint 실행
+      - id: detect_js
+        name: Detect JS/TS files
+        run: |
+          if [ -n "$(git ls-files '*.js' '*.jsx' '*.ts' '*.tsx' 2>/dev/null)" ]; then
+            echo "has_js=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_js=false" >> $GITHUB_OUTPUT
+          fi
+      # ESLint 설정이 있는지 확인 (있을 때만 실행)
+      - id: detect_eslint_cfg
+        name: Detect ESLint config
+        run: |
+          if [ -f .eslintrc ] || [ -f .eslintrc.js ] || [ -f .eslintrc.cjs ] || [ -f .eslintrc.json ] || ( [ -f package.json ] && grep -q '"eslintConfig"' package.json ); then
+            echo "has_cfg=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_cfg=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Install ESLint (local)
+        if: steps.detect_js.outputs.has_js == 'true' && steps.detect_eslint_cfg.outputs.has_cfg == 'true'
+        run: npm i -D eslint
+      - name: Run ESLint
+        if: steps.detect_js.outputs.has_js == 'true' && steps.detect_eslint_cfg.outputs.has_cfg == 'true'
+        run: npx eslint . --max-warnings=0 || true  # 초기엔 실패 막기

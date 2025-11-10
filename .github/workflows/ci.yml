@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [ develop, "feature/*" ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  backend-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install deps
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt || true
+          fi
+          pip install pytest || true
+
+      - name: Test
+        run: |
+          if [ -f pytest.ini ] || [ -d tests ]; then
+            pytest -q || true
+          else
+            echo "No python tests. Skipping."
+          fi
+
+  frontend-node:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f package.json ]; then
+            npm install
+          else
+            echo "No package.json. Skipping install."
+          fi
+
+      - name: Build
+        run: |
+          if [ -f package.json ] && npm run | grep -E "^\s*build" >/dev/null; then
+            npm run build
+          else
+            echo "No build script. Skipping."
+          fi

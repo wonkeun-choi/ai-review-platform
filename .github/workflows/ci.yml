@@ -24,13 +24,27 @@ jobs:
 
   frontend-node:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web/web-react
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
+          cache-dependency-path: apps/web/web-react/package-lock.json
       - name: Install
-        run: npm ci || true
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
       - name: Build
-        run: npm run build || true
+        run: |
+          if npm run | findstr /I /R "^  build"; then
+            npm run build
+          else
+            echo "No build script. Skipping."
+          fi

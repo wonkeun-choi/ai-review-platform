@@ -1,12 +1,15 @@
+# version 제거 (경고 방지)
 services:
   # ------------------------------------------------
   # 🌐 GATEWAY (Nginx reverse proxy)
   # ------------------------------------------------
   gateway:
-    image: nginx:1.27-alpine
+    build:
+      context: ./apps/gateway
+      dockerfile: Dockerfile
     container_name: gateway
     ports:
-      - "80:80"
+      - "80:80"                      # 또는 8080:80 으로 바꿔도 됨
     volumes:
       - ./apps/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -14,20 +17,22 @@ services:
       - review-service
       - coding-service
       - interview-service
-    networks: [appnet]
+    networks:
+      - appnet
 
   # ------------------------------------------------
-  # 💻 FRONTEND (React / Next / Vite)
+  # 💻 FRONTEND (React / Vite)
   # ------------------------------------------------
   web:
     build:
-      context: ./apps/web/web-react
+      context: ./apps/web
       dockerfile: Dockerfile
     container_name: web
-    networks: [appnet]
+    networks:
+      - appnet
 
   # ------------------------------------------------
-  # 🔍 REVIEW SERVICE (FastAPI)
+  # 🔍 REVIEW SERVICE
   # ------------------------------------------------
   review-service:
     build: ./apps/review-service
@@ -35,11 +40,12 @@ services:
     env_file:
       - .env
     expose:
-      - "8001"
-    networks: [appnet]
+      - "8002"
+    networks:
+      - appnet
 
   # ------------------------------------------------
-  # 🤖 INTERVIEW SERVICE (FastAPI)
+  # 🤖 INTERVIEW SERVICE
   # ------------------------------------------------
   interview-service:
     build: ./apps/interview-service
@@ -47,24 +53,25 @@ services:
     env_file:
       - .env
     expose:
-      - "8002"
-    networks: [appnet]
+      - "8001"
+    networks:
+      - appnet
 
   # ------------------------------------------------
-  # 💡 CODING SERVICE (FastAPI + Judge0)
+  # 💡 CODING SERVICE (FastAPI + Gemini + Judge0)
   # ------------------------------------------------
   coding-service:
-    build: ./apps/coding-service
+    build:
+      context: ./apps/coding-service
     container_name: coding-service
-    env_file:
-      - .env
     environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - JUDGE0_URL=http://judge0-api:2358
     expose:
       - "8000"
-    depends_on:
-      - judge0-api
-    networks: [appnet]
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    networks:
+      - appnet
 
   # ------------------------------------------------
   # 🗄️ POSTGRES (for Judge0)
@@ -78,7 +85,8 @@ services:
       POSTGRES_PASSWORD: judge0
     volumes:
       - judge0-db:/var/lib/postgresql/data
-    networks: [appnet]
+    networks:
+      - appnet
 
   # ------------------------------------------------
   # ⚙️ JUDGE0 API
@@ -95,7 +103,8 @@ services:
       - MAX_EXECUTION_TIME=10
     depends_on:
       - postgres
-    networks: [appnet]
+    networks:
+      - appnet
     ports:
       - "2358:2358"
 
@@ -114,13 +123,14 @@ services:
     depends_on:
       - postgres
       - judge0-api
-    networks: [appnet]
+    networks:
+      - appnet
 
 # ------------------------------------------------
 # 🔗 NETWORKS & VOLUMES
 # ------------------------------------------------
 networks:
-  appnet:
+  appnet: {}
 
 volumes:
   judge0-db:

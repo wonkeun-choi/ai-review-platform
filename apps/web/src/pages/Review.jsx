@@ -1,80 +1,178 @@
-// src/pages/Review.jsx
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { IconArrowLeft, IconSparkles } from "@tabler/icons-react";
+import {
+  IconArrowLeft, IconSparkles, IconLoader2, IconAlertTriangle, IconCopy
+} from "@tabler/icons-react";
 import Particles from "@tsparticles/react";
-import { particlesOptions, particlesVersion } from "@/config/particles";
-import { useParticlesInit } from "../hooks/useParticlesInit";
-
-// 1. (신규) formatters.js에서 함수 임포트
-import { formatAiResponse } from "../utils/formatters.jsx";
-// 2. (신규) api/reviewService.js에서 함수 임포트
 import { fetchCodeReview } from "../api/reviewService";
+
+const particlesOptions = {
+  background: { color: { value: "transparent" } },
+  fpsLimit: 60,
+  interactivity: { events: { resize: true } },
+  particles: {
+    color: { value: "#8eb5ff" },
+    links: { enable: true, opacity: 0.22, width: 1 },
+    move: { enable: true, speed: 0.45 },
+    number: { value: 42 },
+    opacity: { value: 0.25 },
+    size: { value: { min: 1, max: 3 } },
+  },
+};
 
 export default function Review() {
   const [code, setCode] = useState("");
   const [review, setReview] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  const init = useParticlesInit();
+  const [copied, setCopied] = useState(false);
 
-  // 3. (수정) handleSubmit 함수가 fetchCodeReview를 사용하도록 변경
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!code.trim()) return;
     setIsLoading(true);
     setError(null);
     setReview("");
-
     try {
-      // API 모듈을 통해 요청
       const data = await fetchCodeReview(code);
-      
-      if (data.review) {
-        setReview(data.review);
-      } else {
-        throw new Error(data.error || "Unknown error occurred.");
-      }
+      if (data?.review) setReview(data.review);
+      else throw new Error(data?.error || "Unknown error");
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Failed to fetch review");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 4. (삭제) 기존 formatReviewText 함수를 여기서 삭제합니다.
-  
-  if (!init) {
-    return null;
-  }
+  const copyReview = async () => {
+    try {
+      await navigator.clipboard.writeText(review || "");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {}
+  };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden text-white p-8">
-      {/* ... (Particles, header UI는 동일) ... */}
-      
-      <div className="max-w-7xl w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 z-10">
-        <form onSubmit={handleSubmit} className="flex flex-col">
-          {/* ... (textarea, button UI는 동일) ... */}
-        </form>
-        
-        <div className="h-[calc(60vh+68px)] flex flex-col rounded-lg ...">
-          <h2 className="text-xl ...">Review Feedback</h2>
-          <div className="flex-1 p-6 overflow-y-auto">
-            {/* ... (isLoading, error UI는 동일) ... */}
-            
-            {/* 5. (수정) formatAiResponse 훅을 직접 호출 */}
-            {review && (
-              <div className="prose prose-invert max-w-none ...">
-                {formatAiResponse(review)}
+    <div className="bg-app text-white px-6 py-10">
+      {/* 배경 입자: 배경 레이어(z-0)로 */}
+      <Particles
+        options={particlesOptions}
+        className="pointer-events-none absolute inset-0 z-0"
+      />
+
+      {/* Header */}
+      <header className="max-w-7xl mx-auto flex items-center justify-between mb-10 relative z-10">
+        <Link
+          to="/"
+          className="flex items-center gap-2 text-slate-300/90 hover:text-sky-300 transition-colors rounded-full p-2 hover:bg-white/5"
+        >
+          <IconArrowLeft size={20} /> <span>Home</span>
+        </Link>
+
+        <h1
+          className="title-glow text-4xl md:text-5xl font-extrabold"
+          data-text="AI Code Review"
+        >
+          AI Code Review
+        </h1>
+
+        <div className="w-24" />
+      </header>
+
+      {/* Main */}
+      <main
+        className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 px-1 relative z-10"
+        style={{ height: "calc(100vh - 170px)" }}
+      >
+        {/* LEFT: Code input */}
+        <section className="flex flex-col h-full">
+          <div className="gcard h-full">
+            <div className="ginner glass-sheen h-full flex flex-col overflow-hidden">
+              <div className="gheader flex items-center justify-between">
+                <span>Paste Your Code</span>
               </div>
-            )}
-            
-            {!isLoading && !error && !review && (
-              <p className="text-gray-500">코드를 제출하면 AI 리뷰가 여기에 표시됩니다.</p>
-            )}
+
+              <textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="여기에 리뷰할 코드를 붙여넣으세요..."
+                className="flex-1 w-full p-5 bg-transparent text-slate-200/95 leading-6 resize-none focus:outline-none custom-scrollbar"
+                spellCheck="false"
+              />
+            </div>
           </div>
-        </div>
-      </div>
+
+          <form onSubmit={handleSubmit}>
+            <button
+              type="submit"
+              disabled={isLoading || !code.trim()}
+              className="btn-neon mt-4 w-full flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <IconLoader2 size={20} className="animate-spin" />
+                  Reviewing...
+                </>
+              ) : (
+                <>
+                  <IconSparkles size={20} />
+                  AI 리뷰 요청
+                </>
+              )}
+            </button>
+          </form>
+        </section>
+
+        {/* RIGHT: Feedback */}
+        <section className="flex flex-col h-full">
+          <div className="gcard h-full">
+            <div className="ginner glass-sheen h-full flex flex-col">
+              <div className="gheader flex items-center justify-between">
+                <span>Review Feedback</span>
+                <button
+                  onClick={copyReview}
+                  className="flex items-center gap-1 text-slate-300/90 hover:text-sky-300 transition-colors disabled:opacity-50"
+                  disabled={!review}
+                  title={copied ? "복사됨!" : "복사"}
+                >
+                  <IconCopy size={18} /> {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+
+              <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+                {isLoading && !review && (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                    <IconLoader2 size={40} className="animate-spin mb-4" />
+                    <p className="text-lg">AI가 코드를 분석 중입니다...</p>
+                    <p>잠시만 기다려주세요.</p>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="p-4 bg-red-900/50 border border-red-700/60 rounded-lg text-red-200">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <IconAlertTriangle size={18} /> Error
+                    </div>
+                    <p className="mt-2 text-sm">{error}</p>
+                  </div>
+                )}
+
+                {review && (
+                  <article className="prose prose-invert prose-elite max-w-none leading-relaxed">
+                    <pre className="whitespace-pre-wrap">{review}</pre>
+                  </article>
+                )}
+
+                {!isLoading && !error && !review && (
+                  <div className="text-center text-slate-400/90">
+                    코드를 제출하면 AI 리뷰가 여기에 표시됩니다.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

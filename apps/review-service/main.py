@@ -49,7 +49,7 @@ Format your response using Markdown. Use **bold** text for headings (like **Issu
 # ----------------------------------------------------
 # API 엔드포인트 정의
 # ----------------------------------------------------
-@app.post("/api/review")
+@app.post("/api/review/")
 async def handle_code_review(code: str = Form(...)): # 👈 Review.jsx의 FormData("code")를 받음
     if not model:
         raise HTTPException(status_code=503, detail="Gemini AI model is not configured.")

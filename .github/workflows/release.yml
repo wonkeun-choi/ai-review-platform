@@ -3,16 +3,16 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
-
-permissions:
-  contents: write   # ✅ 릴리즈/태그 쓰기 권한
+      - "v*"  # v로 시작하는 태그(v1.0.0 등) 푸시 시 실행
 
 jobs:
   create-release:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

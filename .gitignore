@@ -1,33 +1,16 @@
-# ========================
 # Python
-# ========================
 __pycache__/
 *.pyc
 .venv/
-.venv*/
-.pytest_cache/
-coverage/
 
-# ========================
-# Node.js / React
-# ========================
+# Node.js
 node_modules/
 .next/
 out/
-apps/web/dist/
-apps/web/web-react/dist/
 
-# ========================
-# Docker / Logs
-# ========================
+# Docker
 *.log
 .env
-.env.*
-docker-compose.override.yml
 
-# ========================
-# IDE / Editor
-# ========================
+# VSCode
 .vscode/
-.idea/
-.DS_Store

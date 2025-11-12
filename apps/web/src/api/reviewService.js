@@ -3,27 +3,23 @@
 const BASE_URL = "/api";
 
 /**
- * AI 코드 리뷰를 요청합니다.
- * (main.py의 /api/review 엔드포인트를 호출합니다)
- *
- * @param {string} code - 리뷰를 요청할 코드
- * @returns {Promise<object>} - AI 리뷰 결과 (e.g., { review: "..." })
+ * AI 코드 리뷰 요청
+ * @param {string} code - 리뷰할 코드 문자열
+ * @returns {Promise<object>} - { review: "..."} 형태
  */
 export const fetchCodeReview = async (code) => {
-  // Review.jsx는 FormData를 사용합니다
   const formData = new FormData();
   formData.append("code", code);
 
-  const response = await fetch(`${BASE_URL}/review`, {
-    method: 'POST',
+  const res = await fetch(`${BASE_URL}/review/`, {
+    method: "POST",
     body: formData,
   });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `AI 리뷰 요청에 실패했습니다.`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `AI 리뷰 요청 실패: ${res.statusText || res.status}`);
   }
 
-  // main.py가 반환하는 { review: "..." } 객체를 반환
-  return await response.json();
+  return await res.json();
 };

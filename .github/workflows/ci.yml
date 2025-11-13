@@ -36,7 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: .
+        # 🔥 프론트 폴더 위치(레포 기준 경로)
+        working-directory: ./apps/web
+
     steps:
       - uses: actions/checkout@v4
 
